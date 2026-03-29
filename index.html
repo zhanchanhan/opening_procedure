@@ -1,0 +1,369 @@
+
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+.wrap {
+  padding: 16px 0 24px;
+  font-family: var(--font-sans);
+  max-width: 680px;
+}
+
+.phase {
+  margin-bottom: 18px;
+}
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.phase-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge-prep   { background: #EEEDFE; color: #3C3489; }
+.badge-inner  { background: #E1F5EE; color: #085041; }
+.badge-outer  { background: #E6F1FB; color: #0C447C; }
+.badge-verify { background: #FAEEDA; color: #633806; }
+
+.phase-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-tertiary);
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.step:hover {
+  border-color: var(--color-border-secondary);
+}
+
+.step.done {
+  background: var(--color-background-primary);
+  border-color: var(--color-border-tertiary);
+  opacity: 0.55;
+}
+
+.step-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border-primary);
+  background: var(--color-background-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.step.done .step-check {
+  background: #1D9E75;
+  border-color: #1D9E75;
+}
+
+.checkmark {
+  display: none;
+}
+
+.step.done .checkmark {
+  display: block;
+}
+
+.step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-main {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.step.done .step-main {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.step-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.step.done .step-note {
+  color: var(--color-text-tertiary);
+}
+
+.warn {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #854F0B;
+  background: #FAEEDA;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+
+.progress-bar-wrap {
+  margin: 0 0 20px;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-track {
+  height: 6px;
+  background: var(--color-background-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #1D9E75;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.reset-btn {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1px solid var(--color-border-tertiary);
+  padding: 4px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.reset-btn:hover {
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+</style>
+
+<div class="wrap">
+
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>開店進度</span>
+      <span id="prog-text">0 / 18 完成</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge badge-prep">到店第一步</span>
+      <span class="phase-title">開燈＆預熱設備</span>
+    </div>
+    <div class="steps">
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開室內燈</div>
+          <div class="step-note">到店後第一件事</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開封膜機預熱</div>
+          <div class="step-note">需要暖機時間，先開先好</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開蒸汽機預熱 <span class="warn">⚠ 注意蒸汽</span></div>
+          <div class="step-note">預熱完成後即可關閉，勿讓蒸汽持續噴發</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge badge-inner">內場</span>
+      <span class="phase-title">煮珍珠＆備茶</span>
+    </div>
+    <div class="steps">
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">優先煮珍珠（最耗時）</div>
+          <div class="step-note">水滾後下珍珠 → 大滾後轉中小火 → 不時攪拌，共需 60 分鐘</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開始煮茶</div>
+          <div class="step-note">茶桶需離地 30 cm；若不足，放藍色籃子墊高</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開製冰機</div>
+          <div class="step-note">挖冰只能用挖冰勺；禁止將挖冰勺丟入冰槽</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">所有器具用生飲水淋過</div>
+          <div class="step-note">小至濾茶網、大至鍋子、茶桶，全部都要。接著使用時再沖一次</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge badge-outer">外場</span>
+      <span class="phase-title">器具＆收銀準備</span>
+    </div>
+    <div class="steps">
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">器具用生飲水淋過後歸位</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">冰槽桶用生飲水淋過後打冰</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">POS 機開機，清點零用金 <span class="warn">重要</span></div>
+          <div class="step-note">應為 $10,000 整（含零錢盤）。不足請立即告知主管並傳群組，未告知而少錢由當班人員負責</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">確認發票機＆貼紙機已開機</div>
+          <div class="step-note">未開機將無法出單</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge badge-prep">環境整備</span>
+      <span class="phase-title">清潔＆陳設</span>
+    </div>
+    <div class="steps">
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">外場廊道掃地</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">椅子放定位</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">擦拭佈置台＆點餐台</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge badge-verify">開店前 5 分鐘</span>
+      <span class="phase-title">最後確認</span>
+    </div>
+    <div class="steps">
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">開室外燈</div>
+          <div class="step-note">開店前 5 分鐘開啟</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggle(this)">
+        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-body">
+          <div class="step-main">內外場全部確認完畢</div>
+          <div class="step-note">所有步驟打勾後即可開店營業</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="resetAll()">重置清單</button>
+</div>
+
+<script>
+const TOTAL = 18;
+function toggle(el) {
+  el.classList.toggle('done');
+  updateProgress();
+}
+function updateProgress() {
+  const done = document.querySelectorAll('.step.done').length;
+  document.getElementById('prog-fill').style.width = (done/TOTAL*100)+'%';
+  document.getElementById('prog-text').textContent = done + ' / ' + TOTAL + ' 完成';
+}
+function resetAll() {
+  document.querySelectorAll('.step.done').forEach(s => s.classList.remove('done'));
+  updateProgress();
+}
+</script>
