@@ -820,37 +820,61 @@ async function submitReport() {
       undoneItems.forEach(i => { summary += `  ✗ [${i.section}] ${i.name}\n`; });
     }
 
-    // Build HTML table for email
+    // Build HTML email body — photos embedded as <img> base64
     let rows = '';
     sections.forEach(sec => {
       sec.items.forEach(item => {
         const s = state[item.id] || { done: false, photos: [] };
         const done = s.done;
-        const photoCount = (s.photos || []).length;
+        const photos = s.photos || [];
+
+        // Build inline photo thumbnails
+        let photoCell = '—';
+        if (photos.length > 0) {
+          photoCell = photos.map(p =>
+            `<img src="${p.dataUrl}"
+              style="width:120px;height:90px;object-fit:cover;border-radius:6px;
+                     margin:3px;border:1px solid #ddd;display:inline-block;"
+              alt="現場照片" />`
+          ).join('');
+        }
+
         rows += `<tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${sec.title}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${item.name}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${done ? '✅' : '❌'}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${photoCount > 0 ? `📷 ${photoCount}張` : '—'}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;white-space:nowrap;">${sec.title}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${item.name}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${done ? '✅' : '❌'}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${photoCell}</td>
         </tr>`;
       });
     });
 
     const htmlBody = `
-<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-  <h2 style="color:#f0a500;">☕ 開店流程報告</h2>
-  <p><b>日期：</b>${dateStr}<br><b>當班：</b>${staff}<br><b>完成進度：</b>${doneItems.length}/${TOTAL} 項</p>
-  ${note ? `<p><b>備註：</b>${note}</p>` : ''}
-  <table style="width:100%;border-collapse:collapse;font-size:14px;">
-    <thead><tr style="background:#f5f5f5;">
-      <th style="padding:8px 12px;text-align:left;">區域</th>
-      <th style="padding:8px 12px;text-align:left;">項目</th>
-      <th style="padding:8px 12px;text-align:center;">狀態</th>
-      <th style="padding:8px 12px;text-align:center;">照片</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <p style="color:#999;font-size:12px;margin-top:16px;">此郵件由開店清單系統自動發送</p>
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:680px;margin:0 auto;background:#fff;">
+  <div style="background:#1a1a1d;padding:24px 28px;border-radius:12px 12px 0 0;">
+    <h2 style="color:#f0a500;margin:0 0 4px;font-size:20px;">☕ 開店流程報告</h2>
+    <p style="color:#9996a0;margin:0;font-size:13px;">${dateStr}</p>
+  </div>
+  <div style="padding:20px 28px;background:#f9f9f9;border-left:1px solid #eee;border-right:1px solid #eee;">
+    <table style="font-size:14px;border-collapse:collapse;width:100%;">
+      <tr><td style="padding:4px 0;color:#666;width:80px;">當班人員</td><td style="padding:4px 0;font-weight:600;">${staff}</td></tr>
+      <tr><td style="padding:4px 0;color:#666;">完成進度</td><td style="padding:4px 0;font-weight:600;">${doneItems.length} / ${TOTAL} 項</td></tr>
+      ${note ? `<tr><td style="padding:4px 0;color:#666;">備註</td><td style="padding:4px 0;">${note}</td></tr>` : ''}
+    </table>
+  </div>
+  <div style="padding:0 28px 28px;border:1px solid #eee;border-top:none;border-radius:0 0 12px 12px;">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:20px;">
+      <thead>
+        <tr style="background:#f0f0f0;">
+          <th style="padding:10px 12px;text-align:left;font-weight:600;white-space:nowrap;">區域</th>
+          <th style="padding:10px 12px;text-align:left;font-weight:600;">項目</th>
+          <th style="padding:10px 12px;text-align:center;font-weight:600;">狀態</th>
+          <th style="padding:10px 12px;text-align:left;font-weight:600;">現場照片</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="color:#aaa;font-size:11px;margin-top:20px;margin-bottom:0;">此郵件由開店清單系統自動發送</p>
+  </div>
 </div>`;
 
     // EmailJS template variables
