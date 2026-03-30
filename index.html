@@ -798,11 +798,19 @@ function resetAll() {
 }
 
 // ── Date ───────────────────────────────────────────────────────
+let plainDateStr = ''; // 純文字日期，供郵件 subject 使用（避免 HTML encode）
+
 function setDate() {
   const d = new Date();
   const days = ['日','一','二','三','四','五','六'];
-  document.getElementById('headerDate').textContent =
-    `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} 週${days[d.getDay()]}`;
+  const y  = d.getFullYear();
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const da = String(d.getDate()).padStart(2,'0');
+  const dw = days[d.getDay()];
+  // DOM 顯示用（/ 在 textContent 完全安全，但讀回來 emailjs 可能再 encode）
+  document.getElementById('headerDate').textContent = `${y}/${mo}/${da} 週${dw}`;
+  // 郵件用：改用中文間隔，完全避開特殊字元
+  plainDateStr = `${y}年${mo}月${da}日 週${dw}`;
 }
 
 // ── Modal ──────────────────────────────────────────────────────
@@ -897,7 +905,7 @@ async function submitReport() {
     // ── 4. Payload 安全檢查：超過 48KB 則移除照片保底送出 ──
     const params = {
       to_email: TARGET_EMAIL,
-      subject:  `開店報告｜${dateStr}｜${staff}`,
+      subject:  `開店報告｜${plainDateStr}｜${staff}`,
       name:     staff,
       date:     dateStr,
       message:  summary,
