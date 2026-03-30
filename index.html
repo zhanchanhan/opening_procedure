@@ -721,32 +721,53 @@ function handlePhoto(id, e) {
   });
 }
 
-// 目標：每張照片壓縮後 base64 不超過 MAX_PHOTO_B64 字元（約 25KB binary）
-const MAX_PHOTO_B64 = 33000; // base64 chars ≈ 25KB
-
+// ── 壓縮工具 ──────────────────────────────────────────────────
+// 拍照時：快速壓縮存檔（預覽用，保留較高品質）
 function compressImage(dataUrl, maxW, quality, cb) {
   const img = new Image();
   img.onload = () => {
-    // 持續縮小直到達標
-    function tryCompress(w, q) {
-      const h = Math.round(img.height * (w / img.width));
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const result = canvas.toDataURL('image/jpeg', q);
-
-      if (result.length <= MAX_PHOTO_B64) {
-        cb(result);
-      } else if (w > 200 || q > 0.15) {
-        // 每輪寬度縮 70%、品質降 0.1
-        tryCompress(Math.max(200, Math.round(w * 0.7)), Math.max(0.15, q - 0.1));
-      } else {
-        cb(result); // 已到最小，直接給出
-      }
-    }
-    tryCompress(Math.min(img.width, maxW), quality);
+    const ratio = Math.min(1, maxW / img.width);
+    const w = Math.round(img.width * ratio);
+    const h = Math.round(img.height * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', quality));
   };
   img.src = dataUrl;
+}
+
+// 送出前：強制把 dataUrl 壓縮到不超過 targetBytes 字元
+function forceCompressToSize(dataUrl, targetBytes) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      // 從 400px 寬、品質 0.5 開始，逐步縮小直到達標
+      let w = Math.min(img.width, 400);
+      let q = 0.5;
+      function attempt() {
+        const h = Math.round(img.height * (w / img.width));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const result = canvas.toDataURL('image/jpeg', q);
+        if (result.length <= targetBytes || (w <= 150 && q <= 0.15)) {
+          resolve(result);
+        } else {
+          // 縮小策略：先降品質，再縮尺寸
+          if (q > 0.15) {
+            q = Math.max(0.15, q - 0.1);
+          } else {
+            w = Math.max(150, Math.round(w * 0.75));
+            q = 0.4;
+          }
+          attempt();
+        }
+      }
+      attempt();
+    };
+    img.src = dataUrl;
+  });
 }
 
 function deletePhoto(id, idx) {
@@ -795,7 +816,7 @@ function closeSubmitModal() {
 // ── Submit ─────────────────────────────────────────────────────
 async function submitReport() {
   const staff = document.getElementById('staffName').value.trim();
-  const note = document.getElementById('staffNote').value.trim();
+  const note  = document.getElementById('staffNote').value.trim();
 
   if (!staff) {
     showToast('請填寫當班人員姓名', true);
@@ -803,154 +824,120 @@ async function submitReport() {
     return;
   }
 
-  const btn = document.getElementById('confirmSendBtn');
+  const btn   = document.getElementById('confirmSendBtn');
   const label = document.getElementById('sendBtnLabel');
   btn.disabled = true;
-  label.innerHTML = '<div class="spinner"></div> 寄送中…';
+  label.innerHTML = '<div class="spinner"></div> 壓縮照片中…';
 
   try {
-    // Build checklist HTML
     const dateStr = document.getElementById('headerDate').textContent;
-    const doneItems = [];
-    const undoneItems = [];
 
+    // ── 1. 送出前強制壓縮所有照片到每張 ≤ 20KB base64 ──
+    const PER_PHOTO_BUDGET = 20000;
+    const compressedPhotos = {};
+    const tasks = [];
+    allItems.forEach(item => {
+      const photos = (state[item.id] || {}).photos || [];
+      if (!photos.length) return;
+      tasks.push(
+        Promise.all(photos.map(p => forceCompressToSize(p.dataUrl, PER_PHOTO_BUDGET)))
+          .then(results => { compressedPhotos[item.id] = results; })
+      );
+    });
+    await Promise.all(tasks);
+
+    label.innerHTML = '<div class="spinner"></div> 寄送中…';
+
+    // ── 2. 分類完成 / 未完成 ──
+    const doneItems   = [];
+    const undoneItems = [];
     sections.forEach(sec => {
       sec.items.forEach(item => {
         const s = state[item.id] || { done: false, photos: [] };
-        const entry = { name: item.name, section: sec.title, photos: s.photos || [] };
+        const entry = { id: item.id, name: item.name, section: sec.title, photos: s.photos || [] };
         if (s.done) doneItems.push(entry); else undoneItems.push(entry);
       });
     });
 
-    // Build plain text summary
-    let summary = `📋 開店流程報告\n日期：${dateStr}\n當班：${staff}\n完成：${doneItems.length}/${TOTAL} 項\n`;
-    if (note) summary += `備註：${note}\n`;
-    summary += `\n✅ 已完成項目（${doneItems.length}）\n`;
-    doneItems.forEach(i => { summary += `  ✓ [${i.section}] ${i.name}${i.photos.length ? ` 📷×${i.photos.length}` : ''}\n`; });
-    if (undoneItems.length) {
-      summary += `\n❌ 未完成項目（${undoneItems.length}）\n`;
-      undoneItems.forEach(i => { summary += `  ✗ [${i.section}] ${i.name}\n`; });
-    }
+    const summary = `開店報告 ${dateStr} 當班:${staff} 完成:${doneItems.length}/${TOTAL}${note ? ' 備註:' + note : ''}`;
 
-    // Build HTML email body — photos embedded as <img> base64
+    // ── 3. 組裝 HTML（使用壓縮後照片）──
     let rows = '';
     sections.forEach(sec => {
       sec.items.forEach(item => {
-        const s = state[item.id] || { done: false, photos: [] };
-        const done = s.done;
-        const photos = s.photos || [];
-
-        // Build inline photo thumbnails
-        let photoCell = '—';
-        if (photos.length > 0) {
-          photoCell = photos.map(p =>
-            `<img src="${p.dataUrl}"
-              style="width:120px;height:90px;object-fit:cover;border-radius:6px;
-                     margin:3px;border:1px solid #ddd;display:inline-block;"
-              alt="現場照片" />`
-          ).join('');
-        }
-
+        const s       = state[item.id] || { done: false, photos: [] };
+        const cPhotos = compressedPhotos[item.id] || [];
+        let photoCell = cPhotos.length
+          ? cPhotos.map(d => `<img src="${d}" width="90" style="border-radius:4px;margin:2px;border:1px solid #ddd;"/>`).join('')
+          : '—';
         rows += `<tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;white-space:nowrap;">${sec.title}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${item.name}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${done ? '✅' : '❌'}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${photoCell}</td>
-        </tr>`;
+<td style="padding:7px 9px;border-bottom:1px solid #eee;white-space:nowrap;">${sec.title}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${item.name}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;text-align:center;">${s.done ? '✅' : '❌'}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${photoCell}</td>
+</tr>`;
       });
     });
 
-    const htmlBody = `
-<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:680px;margin:0 auto;background:#fff;">
-  <div style="background:#1a1a1d;padding:24px 28px;border-radius:12px 12px 0 0;">
-    <h2 style="color:#f0a500;margin:0 0 4px;font-size:20px;">☕ 開店流程報告</h2>
-    <p style="color:#9996a0;margin:0;font-size:13px;">${dateStr}</p>
-  </div>
-  <div style="padding:20px 28px;background:#f9f9f9;border-left:1px solid #eee;border-right:1px solid #eee;">
-    <table style="font-size:14px;border-collapse:collapse;width:100%;">
-      <tr><td style="padding:4px 0;color:#666;width:80px;">當班人員</td><td style="padding:4px 0;font-weight:600;">${staff}</td></tr>
-      <tr><td style="padding:4px 0;color:#666;">完成進度</td><td style="padding:4px 0;font-weight:600;">${doneItems.length} / ${TOTAL} 項</td></tr>
-      ${note ? `<tr><td style="padding:4px 0;color:#666;">備註</td><td style="padding:4px 0;">${note}</td></tr>` : ''}
-    </table>
-  </div>
-  <div style="padding:0 28px 28px;border:1px solid #eee;border-top:none;border-radius:0 0 12px 12px;">
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:20px;">
-      <thead>
-        <tr style="background:#f0f0f0;">
-          <th style="padding:10px 12px;text-align:left;font-weight:600;white-space:nowrap;">區域</th>
-          <th style="padding:10px 12px;text-align:left;font-weight:600;">項目</th>
-          <th style="padding:10px 12px;text-align:center;font-weight:600;">狀態</th>
-          <th style="padding:10px 12px;text-align:left;font-weight:600;">現場照片</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <p style="color:#aaa;font-size:11px;margin-top:20px;margin-bottom:0;">此郵件由開店清單系統自動發送</p>
-  </div>
+    const htmlBody = `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
+<h2 style="color:#f0a500;">☕ 開店流程報告</h2>
+<p><b>日期：</b>${dateStr}<br><b>當班：</b>${staff}<br><b>完成：</b>${doneItems.length}/${TOTAL} 項${note ? `<br><b>備註：</b>${note}` : ''}</p>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+<thead><tr style="background:#f0f0f0;">
+<th style="padding:7px 9px;text-align:left;">區域</th>
+<th style="padding:7px 9px;text-align:left;">項目</th>
+<th style="padding:7px 9px;text-align:center;">狀態</th>
+<th style="padding:7px 9px;text-align:left;">照片</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+<p style="color:#aaa;font-size:11px;margin-top:14px;">此郵件由開店清單系統自動發送</p>
 </div>`;
 
-    // EmailJS template variables
-    const templateParams = {
+    // ── 4. Payload 安全檢查：超過 48KB 則移除照片保底送出 ──
+    const params = {
       to_email: TARGET_EMAIL,
-      subject: `開店報告｜${dateStr}｜${staff}`,
-      name: staff,
-      staff_name: staff,
-      date: dateStr,
-      message: summary,
+      subject:  `開店報告｜${dateStr}｜${staff}`,
+      name:     staff,
+      date:     dateStr,
+      message:  summary,
       html_body: htmlBody,
-      done_count: String(doneItems.length),
-      total: String(TOTAL),
-      note: note || '無',
+      note:     note || '無',
     };
 
-    // ── Payload size guard ────────────────────────────────────────
-    // EmailJS free tier has ~50KB limit. Check and strip photos if needed.
-    const payloadSize = JSON.stringify(templateParams).length;
-    const MAX_BYTES = 40000; // safe margin — EmailJS free tier ~50KB, leave room for headers
-
-    if (payloadSize > MAX_BYTES) {
-      // Re-build htmlBody without photo img tags, just show count
-      let rowsNoPhoto = '';
+    let photosDropped = false;
+    if (JSON.stringify(params).length > 48000) {
+      photosDropped = true;
+      let rowsFb = '';
       sections.forEach(sec => {
         sec.items.forEach(item => {
-          const s = state[item.id] || { done: false, photos: [] };
-          const photoCount = (s.photos || []).length;
-          rowsNoPhoto += `<tr>
-            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;white-space:nowrap;">${sec.title}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${item.name}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${s.done ? '✅' : '❌'}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${photoCount > 0 ? `📷 ${photoCount}張（照片因容量限制未能附上）` : '—'}</td>
-          </tr>`;
+          const s   = state[item.id] || { done: false, photos: [] };
+          const cnt = (s.photos || []).length;
+          rowsFb += `<tr>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${sec.title}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${item.name}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;text-align:center;">${s.done ? '✅' : '❌'}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${cnt ? `📷 ${cnt}張` : '—'}</td>
+</tr>`;
         });
       });
-      const htmlBodyLite = htmlBody.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${rowsNoPhoto}</tbody>`)
-        .replace(/<p style="color:#aaa.*?<\/p>/, '<p style="color:#e07b00;font-size:12px;margin-top:20px;margin-bottom:0;">⚠ 本次照片因容量過大無法附入郵件，請另行確認。</p>');
-      templateParams.html_body = htmlBodyLite;
-      console.warn('照片資料量過大，已改為純文字模式寄送');
+      params.html_body = htmlBody.replace(/<tbody>[\s\S]*<\/tbody>/m, `<tbody>${rowsFb}</tbody>`);
     }
-    // ─────────────────────────────────────────────────────────────
 
-    // Initialize EmailJS
     emailjs.init(EMAILJS_PUBLIC_KEY);
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
 
     closeSubmitModal();
-    showToast('✅ 報告已成功寄出！');
+    showToast(photosDropped ? '✅ 已寄出（照片過多已略去）' : '✅ 報告已成功寄出！');
 
   } catch (err) {
     console.error('EmailJS error:', err);
-    const msg = err?.text || err?.message || JSON.stringify(err);
-    if (msg.includes('413') || msg.includes('payload') || msg.includes('size')) {
-      showToast('⚠ 照片太多導致失敗，請減少照片後重試', true);
-    } else {
-      showToast('⚠ 寄送失敗：' + msg.slice(0, 40), true);
-    }
+    showToast('⚠ 寄送失敗：' + String(err?.text || err?.message || err).slice(0, 60), true);
   } finally {
     btn.disabled = false;
     label.textContent = '確認寄送';
   }
 }
-
 // ── Toast ──────────────────────────────────────────────────────
 function showToast(msg, isError = false) {
   const t = document.getElementById('toast');
