@@ -580,10 +580,8 @@ const TOTAL = allItems.length;
 let state = {}; // { [id]: { done: bool, photos: [{name, dataUrl}] } }
 
 function initState() {
-  const saved = localStorage.getItem('opening_state_v3');
-  if (saved) {
-    try { state = JSON.parse(saved); return; } catch(e) {}
-  }
+  // 每次開啟頁面都自動重置，不保留上次狀態
+  localStorage.removeItem('opening_state_v3');
   allItems.forEach(item => { state[item.id] = { done: false, photos: [] }; });
 }
 
