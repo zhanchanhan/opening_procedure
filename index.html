@@ -1,380 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>開店流程清單</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
-* { box-sizing: border-box; }
-body { margin: 0; }
+  :root {
+    --bg: #0f0f10;
+    --surface: #1a1a1d;
+    --surface2: #232328;
+    --border: #2e2e35;
+    --accent: #f0a500;
+    --accent2: #e07b00;
+    --green: #3ecf6e;
+    --green-dim: #1a4a30;
+    --red: #e05252;
+    --text: #f0ede8;
+    --text2: #9996a0;
+    --text3: #6a6775;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
 
-.wrap {
-  padding: 16px 0 24px;
-  font-family: var(--font-sans);
-  max-width: 680px;
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.phase { margin-bottom: 18px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', 'PingFang TC', 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 120px;
+  }
 
-.phase-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--accent);
+  }
+  .header-date {
+    font-size: .75rem;
+    color: var(--text3);
+  }
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .progress-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    border-radius: 99px;
+    transition: width .4s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+  .progress-label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--text2);
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: right;
+  }
 
-.phase-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 10px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
+  /* ── Sections ── */
+  .section {
+    margin: 20px 16px 0;
+  }
+  .section-title {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+  .section-sub {
+    font-size: .65rem;
+    color: var(--accent);
+    letter-spacing: .06em;
+    margin-left: 8px;
+  }
 
-.badge-prep   { background: #EEEDFE; color: #3C3489; }
-.badge-inner  { background: #E1F5EE; color: #085041; }
-.badge-outer  { background: #E6F1FB; color: #0C447C; }
-.badge-verify { background: #FAEEDA; color: #633806; }
+  /* ── Item Card ── */
+  .item-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .item-card.done {
+    border-color: var(--green-dim);
+    background: #12201a;
+  }
+  .item-card.done .item-main {
+    opacity: .7;
+  }
 
-.phase-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
+  .item-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity .2s;
+  }
 
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+  /* Checkbox */
+  .checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    transition: background .2s, border-color .2s;
+    background: var(--surface2);
+  }
+  .checkbox.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .checkbox svg {
+    display: none;
+  }
+  .checkbox.checked svg {
+    display: block;
+  }
 
-.step {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-border-tertiary);
-  background: var(--color-background-secondary);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  user-select: none;
-}
+  .item-text { flex: 1; }
+  .item-name {
+    font-size: .95rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 3px;
+  }
+  .item-card.done .item-name {
+    text-decoration: line-through;
+    color: var(--text2);
+  }
+  .item-desc {
+    font-size: .78rem;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+  .item-warn {
+    display: inline-block;
+    font-size: .7rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .item-important {
+    display: inline-block;
+    font-size: .7rem;
+    background: var(--accent);
+    color: #000;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
 
-.step:hover { border-color: var(--color-border-secondary); }
+  /* Camera section */
+  .item-photo {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .item-card.done .item-photo {
+    border-top-color: var(--green-dim);
+  }
 
-.step.done {
-  background: var(--color-background-primary);
-  border-color: var(--color-border-tertiary);
-  opacity: 0.55;
-}
+  .photo-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: .78rem;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .photo-btn:hover, .photo-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .photo-btn svg { flex-shrink: 0; }
+  .photo-btn input[type=file] { display: none; }
 
-.step-check {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid #2C2C2A;
-  background: var(--color-background-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-  transition: background 0.15s, border-color 0.15s;
-}
+  .photo-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .photo-thumb {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .photo-thumb-del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0,0,0,.7);
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    color: #fff;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-label {
+    font-size: .7rem;
+    color: var(--text3);
+    align-self: center;
+  }
 
-.step.done .step-check {
-  background: #1D9E75;
-  border-color: #1D9E75;
-}
+  /* ── Submit area ── */
+  .submit-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, var(--bg) 30%);
+    padding: 20px 16px 28px;
+    z-index: 200;
+  }
+  .submit-row {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-reset {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: .85rem;
+    padding: 14px 18px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .2s;
+  }
+  .btn-reset:hover { background: var(--surface2); }
 
-.checkmark { display: none; }
-.step.done .checkmark { display: block; }
+  .btn-submit {
+    flex: 1;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #000;
+    font-size: .95rem;
+    font-weight: 700;
+    padding: 14px;
+    cursor: pointer;
+    letter-spacing: .04em;
+    transition: background .2s, opacity .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-submit:disabled {
+    background: var(--surface2);
+    color: var(--text3);
+    cursor: not-allowed;
+  }
+  .btn-submit:not(:disabled):hover { background: var(--accent2); }
 
-.step-body { flex: 1; min-width: 0; }
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    z-index: 999;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open {
+    display: flex;
+    animation: fadeIn .15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
-.step-main {
-  font-size: 14px;
-  color: var(--color-text-primary);
-  line-height: 1.45;
-  font-weight: 500;
-}
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 520px;
+    padding: 24px 20px 40px;
+    animation: slideUp .2s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 
-.step.done .step-main {
-  text-decoration: line-through;
-  color: var(--color-text-tertiary);
-}
+  .modal h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .modal p {
+    font-size: .85rem;
+    color: var(--text2);
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+  .modal-input-label {
+    font-size: .78rem;
+    color: var(--text2);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .modal-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: .9rem;
+    padding: 11px 13px;
+    margin-bottom: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-input::placeholder { color: var(--text3); }
 
-.step-note {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-top: 3px;
-  line-height: 1.5;
-}
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .btn-cancel {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: .9rem;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .btn-confirm {
+    flex: 2;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #000;
+    font-size: .9rem;
+    font-weight: 700;
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-confirm:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
 
-.step.done .step-note { color: var(--color-text-tertiary); }
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--green);
+    color: #000;
+    font-weight: 700;
+    font-size: .85rem;
+    padding: 12px 22px;
+    border-radius: 99px;
+    z-index: 9999;
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    white-space: nowrap;
+  }
+  .toast.error { background: var(--red); color: #fff; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
 
-.warn {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 500;
-  color: #854F0B;
-  background: #FAEEDA;
-  padding: 1px 7px;
-  border-radius: 10px;
-  margin-left: 4px;
-}
+  /* Spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg) } }
 
-.progress-bar-wrap { margin: 0 0 20px; }
-
-.progress-label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-bottom: 6px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.progress-track {
-  height: 6px;
-  background: var(--color-background-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #1D9E75;
-  border-radius: 4px;
-  transition: width 0.3s;
-}
-
-.reset-wrap {
-  margin-top: 16px;
-  padding: 12px 16px;
-  border-radius: var(--border-radius-md);
-  border: 2px solid #E24B4A;
-  background: #FCEBEB;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.reset-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #A32D2D;
-}
-
-.reset-sub {
-  font-size: 11px;
-  color: #791F1F;
-  margin-top: 2px;
-}
-
-.reset-btn {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  background: #E24B4A;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.reset-btn:hover { background: #A32D2D; }
+  /* All done banner */
+  .all-done {
+    margin: 16px;
+    background: linear-gradient(135deg, #1a4a30, #12201a);
+    border: 1px solid var(--green-dim);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+  }
+  .all-done.show { display: flex; }
+  .all-done-icon { font-size: 1.8rem; }
+  .all-done-text { font-size: .9rem; font-weight: 600; color: var(--green); }
+  .all-done-sub { font-size: .75rem; color: var(--text2); margin-top: 2px; }
 </style>
+</head>
+<body>
 
-<div class="wrap">
-
-  <div class="progress-bar-wrap">
-    <div class="progress-label">
-      <span>開店進度</span>
-      <span id="prog-text">0 / 18 完成</span>
-    </div>
-    <div class="progress-track">
-      <div class="progress-fill" id="prog-fill" style="width:0%"></div>
-    </div>
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <h1>☕ 開店流程清單</h1>
+    <span class="header-date" id="headerDate"></span>
   </div>
-
-  <!-- Phase 1 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-badge badge-prep">到店第一步</span>
-      <span class="phase-title">開燈＆預熱設備</span>
+  <div class="progress-wrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
     </div>
-    <div class="steps">
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開室內燈</div>
-          <div class="step-note">到店後第一件事</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開封膜機預熱</div>
-          <div class="step-note">需要暖機時間，先開先好</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開蒸汽機預熱 <span class="warn">⚠ 注意蒸汽</span></div>
-          <div class="step-note">預熱完成後即可關閉，勿讓蒸汽持續噴發</div>
-        </div>
-      </div>
-    </div>
+    <span class="progress-label" id="progressLabel">0 / 18</span>
   </div>
-
-  <!-- Phase 2 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-badge badge-inner">內場</span>
-      <span class="phase-title">煮珍珠＆備茶</span>
-    </div>
-    <div class="steps">
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">優先煮珍珠（最耗時）</div>
-          <div class="step-note">水滾後下珍珠 → 大滾後轉中小火 → 不時攪拌，共需 60 分鐘</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開始煮茶</div>
-          <div class="step-note">茶桶需離地 30 cm；若不足，放藍色籃子墊高</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開製冰機</div>
-          <div class="step-note">挖冰只能用挖冰勺；禁止將挖冰勺丟入冰槽</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">所有器具用生飲水淋過</div>
-          <div class="step-note">小至濾茶網、大至鍋子、茶桶，全部都要。接著使用時再沖一次</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Phase 3 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-badge badge-outer">外場</span>
-      <span class="phase-title">器具＆收銀準備</span>
-    </div>
-    <div class="steps">
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">器具用生飲水淋過後歸位</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">冰槽桶用生飲水淋過後打冰</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">POS 機開機，清點零用金 <span class="warn">重要</span></div>
-          <div class="step-note">應為 $10,000 整（含零錢盤）。不足請立即告知主管並傳群組，未告知而少錢由當班人員負責</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">確認發票機＆貼紙機已開機</div>
-          <div class="step-note">未開機將無法出單</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Phase 4 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-badge badge-prep">環境整備</span>
-      <span class="phase-title">清潔＆陳設</span>
-    </div>
-    <div class="steps">
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">外場廊道掃地</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">椅子放定位</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">擦拭佈置台＆點餐台</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Phase 5 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-badge badge-verify">開店前 5 分鐘</span>
-      <span class="phase-title">最後確認</span>
-    </div>
-    <div class="steps">
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">開室外燈</div>
-          <div class="step-note">開店前 5 分鐘開啟</div>
-        </div>
-      </div>
-      <div class="step" onclick="toggle(this)">
-        <div class="step-check"><svg class="checkmark" width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="step-body">
-          <div class="step-main">內外場全部確認完畢</div>
-          <div class="step-note">所有步驟打勾後即可開店營業</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="reset-wrap">
-    <div>
-      <div class="reset-label">重置清單</div>
-      <div class="reset-sub">清除所有已完成項目，重新開始</div>
-    </div>
-    <button class="reset-btn" onclick="resetAll()">全部重置</button>
-  </div>
-
 </div>
 
+<!-- All done banner -->
+<div class="all-done" id="allDoneBanner">
+  <div class="all-done-icon">🎉</div>
+  <div>
+    <div class="all-done-text">全部項目完成！</div>
+    <div class="all-done-sub">點選下方「提交報告」寄送紀錄</div>
+  </div>
+</div>
+
+<!-- Content will be rendered by JS -->
+<div id="checklistRoot"></div>
+
+<!-- Submit area -->
+<div class="submit-area">
+  <div class="submit-row">
+    <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
+    <button class="btn-submit" id="submitBtn" onclick="openSubmitModal()">
+      <span>📤 提交報告</span>
+    </button>
+  </div>
+</div>
+
+<!-- Submit Modal -->
+<div class="modal-overlay" id="submitModal">
+  <div class="modal">
+    <h2>📤 提交開店紀錄</h2>
+    <p>將完成清單及照片以郵件寄送至指定帳號。<br>請填寫今日當班人員。</p>
+    <label class="modal-input-label">當班人員姓名</label>
+    <input class="modal-input" id="staffName" type="text" placeholder="請輸入姓名" />
+    <label class="modal-input-label">備註（選填）</label>
+    <textarea class="modal-input" id="staffNote" rows="3" placeholder="任何需要告知主管的事項…" style="resize:none;"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
+      <button class="btn-confirm" id="confirmSendBtn" onclick="submitReport()">
+        <span id="sendBtnLabel">確認寄送</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-const TOTAL = 18;
-function toggle(el) {
-  el.classList.toggle('done');
+// ── EmailJS Config ──────────────────────────────────────────────
+// 請在 https://www.emailjs.com/ 申請帳號後填入以下三個值：
+const EMAILJS_SERVICE_ID  = 'service_g528rop';
+const EMAILJS_TEMPLATE_ID = 'template_pcqsjxg';
+const EMAILJS_PUBLIC_KEY  = 'R8f6lR712-i5veWma';
+const TARGET_EMAIL        = 'zhanhan1209@gmail.com';
+
+// ── Checklist Data ─────────────────────────────────────────────
+const sections = [
+  {
+    title: '到店第一步',
+    sub: '開燈＆預熱設備',
+    items: [
+      { id: 1, name: '開室內燈', desc: '到店後第一件事' },
+      { id: 2, name: '開封膜機預熱', desc: '需要暖機時間，先開先好' },
+      { id: 3, name: '開蒸汽機預熱', desc: '預熱完成後即可關閉，勿讓蒸汽持續噴發', warn: '⚠ 注意蒸汽' },
+    ]
+  },
+  {
+    title: '內場',
+    sub: '煮珍珠＆備茶',
+    items: [
+      { id: 4, name: '優先煮珍珠（最耗時）', desc: '水滾後下珍珠 → 大滾後轉中小火 → 不時攪拌，共需 60 分鐘' },
+      { id: 5, name: '開始煮茶', desc: '茶桶需離地 30 cm；若不足，放藍色籃子墊高' },
+      { id: 6, name: '開製冰機', desc: '挖冰只能用挖冰勺；禁止將挖冰勺丟入冰槽' },
+      { id: 7, name: '所有器具用生飲水淋過', desc: '小至濾茶網、大至鍋子、茶桶，全部都要。接著使用時再沖一次' },
+    ]
+  },
+  {
+    title: '外場',
+    sub: '器具＆收銀準備',
+    items: [
+      { id: 8, name: '器具用生飲水淋過後歸位', desc: '' },
+      { id: 9, name: '冰槽桶用生飲水淋過後打冰', desc: '' },
+      { id: 10, name: 'POS 機開機，清點零用金', desc: '應為 $10,000 整（含零錢盤）。不足請立即告知主管並傳群組，未告知而少錢由當班人員負責', important: true },
+      { id: 11, name: '確認發票機＆貼紙機已開機', desc: '未開機將無法出單' },
+    ]
+  },
+  {
+    title: '環境整備',
+    sub: '清潔＆陳設',
+    items: [
+      { id: 12, name: '外場廊道掃地', desc: '' },
+      { id: 13, name: '椅子放定位', desc: '' },
+      { id: 14, name: '擦拭佈置台＆點餐台', desc: '' },
+    ]
+  },
+  {
+    title: '開店前 5 分鐘',
+    sub: '最後確認',
+    items: [
+      { id: 15, name: '開室外燈', desc: '開店前 5 分鐘開啟' },
+      { id: 16, name: '內外場全部確認完畢', desc: '所有步驟打勾後即可開店營業' },
+    ]
+  },
+];
+
+// Flatten for easy lookup
+const allItems = sections.flatMap(s => s.items);
+const TOTAL = allItems.length;
+
+// ── State ──────────────────────────────────────────────────────
+let state = {}; // { [id]: { done: bool, photos: [{name, dataUrl}] } }
+
+function initState() {
+  const saved = localStorage.getItem('opening_state_v3');
+  if (saved) {
+    try { state = JSON.parse(saved); return; } catch(e) {}
+  }
+  allItems.forEach(item => { state[item.id] = { done: false, photos: [] }; });
+}
+
+function saveState() {
+  localStorage.setItem('opening_state_v3', JSON.stringify(state));
+}
+
+// ── Render ─────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById('checklistRoot');
+  root.innerHTML = '';
+
+  sections.forEach(section => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.innerHTML = section.title + (section.sub ? `<span class="section-sub">${section.sub}</span>` : '');
+    sec.appendChild(title);
+
+    section.items.forEach(item => {
+      const s = state[item.id] || { done: false, photos: [] };
+      const card = document.createElement('div');
+      card.className = 'item-card' + (s.done ? ' done' : '');
+
+      // Main row
+      const main = document.createElement('div');
+      main.className = 'item-main';
+      main.onclick = () => toggleItem(item.id);
+
+      const cb = document.createElement('div');
+      cb.className = 'checkbox' + (s.done ? ' checked' : '');
+      cb.innerHTML = `<svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+        <path d="M1.5 5L5 8.5L11.5 1.5" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+
+      const textDiv = document.createElement('div');
+      textDiv.className = 'item-text';
+
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'item-name';
+      nameDiv.innerHTML = (item.warn ? `<span class="item-warn">${item.warn}</span>` : '') + item.name
+        + (item.important ? '<span class="item-important">重要</span>' : '');
+      textDiv.appendChild(nameDiv);
+
+      if (item.desc) {
+        const descDiv = document.createElement('div');
+        descDiv.className = 'item-desc';
+        descDiv.textContent = item.desc;
+        textDiv.appendChild(descDiv);
+      }
+
+      main.appendChild(cb);
+      main.appendChild(textDiv);
+      card.appendChild(main);
+
+      // Photo row
+      const photoRow = document.createElement('div');
+      photoRow.className = 'item-photo';
+
+      const photoBtn = document.createElement('label');
+      photoBtn.className = 'photo-btn';
+      photoBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>拍照 <span style="color:var(--text3);font-size:.7rem;">（選填）</span>`;
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.capture = 'environment';
+      fileInput.multiple = true;
+      fileInput.onchange = (e) => handlePhoto(item.id, e);
+      photoBtn.appendChild(fileInput);
+      photoRow.appendChild(photoBtn);
+
+      // Previews
+      const previewWrap = document.createElement('div');
+      previewWrap.className = 'photo-preview';
+      (s.photos || []).forEach((photo, idx) => {
+        previewWrap.appendChild(makeThumb(photo, item.id, idx));
+      });
+      photoRow.appendChild(previewWrap);
+
+      card.appendChild(photoRow);
+      sec.appendChild(card);
+    });
+
+    root.appendChild(sec);
+  });
+
   updateProgress();
 }
+
+function makeThumb(photo, itemId, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'photo-thumb';
+  const img = document.createElement('img');
+  img.src = photo.dataUrl;
+  const del = document.createElement('button');
+  del.className = 'photo-thumb-del';
+  del.innerHTML = '×';
+  del.onclick = (e) => { e.stopPropagation(); deletePhoto(itemId, idx); };
+  wrap.appendChild(img);
+  wrap.appendChild(del);
+  return wrap;
+}
+
+// ── Actions ────────────────────────────────────────────────────
+function toggleItem(id) {
+  if (!state[id]) state[id] = { done: false, photos: [] };
+  state[id].done = !state[id].done;
+  saveState();
+  render();
+}
+
+function handlePhoto(id, e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  if (!state[id]) state[id] = { done: false, photos: [] };
+
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      // Compress image
+      compressImage(ev.target.result, 800, 0.7, (compressed) => {
+        state[id].photos.push({ name: file.name, dataUrl: compressed });
+        loaded++;
+        if (loaded === files.length) {
+          saveState();
+          render();
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressImage(dataUrl, maxW, quality, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const ratio = Math.min(1, maxW / img.width);
+    const w = img.width * ratio;
+    const h = img.height * ratio;
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+function deletePhoto(id, idx) {
+  state[id].photos.splice(idx, 1);
+  saveState();
+  render();
+}
+
 function updateProgress() {
-  const done = document.querySelectorAll('.step.done').length;
-  document.getElementById('prog-fill').style.width = (done/TOTAL*100)+'%';
-  document.getElementById('prog-text').textContent = done + ' / ' + TOTAL + ' 完成';
+  const done = Object.values(state).filter(s => s.done).length;
+  const pct = Math.round((done / TOTAL) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done} / ${TOTAL}`;
+
+  const banner = document.getElementById('allDoneBanner');
+  if (done === TOTAL) {
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
 }
+
 function resetAll() {
-  document.querySelectorAll('.step.done').forEach(s => s.classList.remove('done'));
-  updateProgress();
+  if (!confirm('確定要重置所有項目和照片嗎？')) return;
+  allItems.forEach(item => { state[item.id] = { done: false, photos: [] }; });
+  saveState();
+  render();
 }
+
+// ── Date ───────────────────────────────────────────────────────
+function setDate() {
+  const d = new Date();
+  const days = ['日','一','二','三','四','五','六'];
+  document.getElementById('headerDate').textContent =
+    `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} 週${days[d.getDay()]}`;
+}
+
+// ── Modal ──────────────────────────────────────────────────────
+function openSubmitModal() {
+  document.getElementById('submitModal').classList.add('open');
+}
+function closeSubmitModal() {
+  document.getElementById('submitModal').classList.remove('open');
+}
+
+// ── Submit ─────────────────────────────────────────────────────
+async function submitReport() {
+  const staff = document.getElementById('staffName').value.trim();
+  const note = document.getElementById('staffNote').value.trim();
+
+  if (!staff) {
+    showToast('請填寫當班人員姓名', true);
+    document.getElementById('staffName').focus();
+    return;
+  }
+
+  const btn = document.getElementById('confirmSendBtn');
+  const label = document.getElementById('sendBtnLabel');
+  btn.disabled = true;
+  label.innerHTML = '<div class="spinner"></div> 寄送中…';
+
+  try {
+    // Build checklist HTML
+    const dateStr = document.getElementById('headerDate').textContent;
+    const doneItems = [];
+    const undoneItems = [];
+
+    sections.forEach(sec => {
+      sec.items.forEach(item => {
+        const s = state[item.id] || { done: false, photos: [] };
+        const entry = { name: item.name, section: sec.title, photos: s.photos || [] };
+        if (s.done) doneItems.push(entry); else undoneItems.push(entry);
+      });
+    });
+
+    // Build plain text summary
+    let summary = `📋 開店流程報告\n日期：${dateStr}\n當班：${staff}\n完成：${doneItems.length}/${TOTAL} 項\n`;
+    if (note) summary += `備註：${note}\n`;
+    summary += `\n✅ 已完成項目（${doneItems.length}）\n`;
+    doneItems.forEach(i => { summary += `  ✓ [${i.section}] ${i.name}${i.photos.length ? ` 📷×${i.photos.length}` : ''}\n`; });
+    if (undoneItems.length) {
+      summary += `\n❌ 未完成項目（${undoneItems.length}）\n`;
+      undoneItems.forEach(i => { summary += `  ✗ [${i.section}] ${i.name}\n`; });
+    }
+
+    // Build HTML table for email
+    let rows = '';
+    sections.forEach(sec => {
+      sec.items.forEach(item => {
+        const s = state[item.id] || { done: false, photos: [] };
+        const done = s.done;
+        const photoCount = (s.photos || []).length;
+        rows += `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${sec.title}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${item.name}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${done ? '✅' : '❌'}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${photoCount > 0 ? `📷 ${photoCount}張` : '—'}</td>
+        </tr>`;
+      });
+    });
+
+    const htmlBody = `
+<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+  <h2 style="color:#f0a500;">☕ 開店流程報告</h2>
+  <p><b>日期：</b>${dateStr}<br><b>當班：</b>${staff}<br><b>完成進度：</b>${doneItems.length}/${TOTAL} 項</p>
+  ${note ? `<p><b>備註：</b>${note}</p>` : ''}
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <thead><tr style="background:#f5f5f5;">
+      <th style="padding:8px 12px;text-align:left;">區域</th>
+      <th style="padding:8px 12px;text-align:left;">項目</th>
+      <th style="padding:8px 12px;text-align:center;">狀態</th>
+      <th style="padding:8px 12px;text-align:center;">照片</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p style="color:#999;font-size:12px;margin-top:16px;">此郵件由開店清單系統自動發送</p>
+</div>`;
+
+    // EmailJS template variables
+    const templateParams = {
+      to_email: TARGET_EMAIL,
+      subject: `開店報告｜${dateStr}｜${staff}`,
+      name: staff,
+      staff_name: staff,
+      date: dateStr,
+      message: summary,
+      html_body: htmlBody,
+      done_count: String(doneItems.length),
+      total: String(TOTAL),
+      note: note || '無',
+    };
+
+    // Initialize EmailJS
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+
+    closeSubmitModal();
+    showToast('✅ 報告已成功寄出！');
+    // Optionally reset after submit
+    // resetAll();
+
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ 寄送失敗，請檢查 EmailJS 設定', true);
+  } finally {
+    btn.disabled = false;
+    label.textContent = '確認寄送';
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ── Init ───────────────────────────────────────────────────────
+initState();
+setDate();
+render();
 </script>
+</body>
+</html>
