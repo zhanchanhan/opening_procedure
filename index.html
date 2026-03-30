@@ -721,31 +721,30 @@ function handlePhoto(id, e) {
   });
 }
 
+// 目標：每張照片壓縮後 base64 不超過 MAX_PHOTO_B64 字元（約 25KB binary）
+const MAX_PHOTO_B64 = 33000; // base64 chars ≈ 25KB
+
 function compressImage(dataUrl, maxW, quality, cb) {
   const img = new Image();
   img.onload = () => {
-    const ratio = Math.min(1, maxW / img.width);
-    const w = Math.round(img.width * ratio);
-    const h = Math.round(img.height * ratio);
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    let result = canvas.toDataURL('image/jpeg', quality);
-
-    // If still too large (>40KB base64 ≈ ~30KB binary), compress again
-    if (result.length > 54000 && quality > 0.3) {
+    // 持續縮小直到達標
+    function tryCompress(w, q) {
+      const h = Math.round(img.height * (w / img.width));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      result = canvas.toDataURL('image/jpeg', 0.3);
+      const result = canvas.toDataURL('image/jpeg', q);
+
+      if (result.length <= MAX_PHOTO_B64) {
+        cb(result);
+      } else if (w > 200 || q > 0.15) {
+        // 每輪寬度縮 70%、品質降 0.1
+        tryCompress(Math.max(200, Math.round(w * 0.7)), Math.max(0.15, q - 0.1));
+      } else {
+        cb(result); // 已到最小，直接給出
+      }
     }
-    // If STILL too large, shrink dimensions further
-    if (result.length > 54000) {
-      const canvas2 = document.createElement('canvas');
-      canvas2.width = Math.round(w * 0.6);
-      canvas2.height = Math.round(h * 0.6);
-      canvas2.getContext('2d').drawImage(img, 0, 0, canvas2.width, canvas2.height);
-      result = canvas2.toDataURL('image/jpeg', 0.3);
-    }
-    cb(result);
+    tryCompress(Math.min(img.width, maxW), quality);
   };
   img.src = dataUrl;
 }
@@ -907,7 +906,7 @@ async function submitReport() {
     // ── Payload size guard ────────────────────────────────────────
     // EmailJS free tier has ~50KB limit. Check and strip photos if needed.
     const payloadSize = JSON.stringify(templateParams).length;
-    const MAX_BYTES = 45000; // safe margin under 50KB
+    const MAX_BYTES = 40000; // safe margin — EmailJS free tier ~50KB, leave room for headers
 
     if (payloadSize > MAX_BYTES) {
       // Re-build htmlBody without photo img tags, just show count
