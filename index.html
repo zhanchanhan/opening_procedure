@@ -725,12 +725,27 @@ function compressImage(dataUrl, maxW, quality, cb) {
   const img = new Image();
   img.onload = () => {
     const ratio = Math.min(1, maxW / img.width);
-    const w = img.width * ratio;
-    const h = img.height * ratio;
+    const w = Math.round(img.width * ratio);
+    const h = Math.round(img.height * ratio);
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    cb(canvas.toDataURL('image/jpeg', quality));
+    let result = canvas.toDataURL('image/jpeg', quality);
+
+    // If still too large (>40KB base64 ≈ ~30KB binary), compress again
+    if (result.length > 54000 && quality > 0.3) {
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      result = canvas.toDataURL('image/jpeg', 0.3);
+    }
+    // If STILL too large, shrink dimensions further
+    if (result.length > 54000) {
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = Math.round(w * 0.6);
+      canvas2.height = Math.round(h * 0.6);
+      canvas2.getContext('2d').drawImage(img, 0, 0, canvas2.width, canvas2.height);
+      result = canvas2.toDataURL('image/jpeg', 0.3);
+    }
+    cb(result);
   };
   img.src = dataUrl;
 }
@@ -889,18 +904,48 @@ async function submitReport() {
       note: note || '無',
     };
 
+    // ── Payload size guard ────────────────────────────────────────
+    // EmailJS free tier has ~50KB limit. Check and strip photos if needed.
+    const payloadSize = JSON.stringify(templateParams).length;
+    const MAX_BYTES = 45000; // safe margin under 50KB
+
+    if (payloadSize > MAX_BYTES) {
+      // Re-build htmlBody without photo img tags, just show count
+      let rowsNoPhoto = '';
+      sections.forEach(sec => {
+        sec.items.forEach(item => {
+          const s = state[item.id] || { done: false, photos: [] };
+          const photoCount = (s.photos || []).length;
+          rowsNoPhoto += `<tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;white-space:nowrap;">${sec.title}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${item.name}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${s.done ? '✅' : '❌'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;vertical-align:top;">${photoCount > 0 ? `📷 ${photoCount}張（照片因容量限制未能附上）` : '—'}</td>
+          </tr>`;
+        });
+      });
+      const htmlBodyLite = htmlBody.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${rowsNoPhoto}</tbody>`)
+        .replace(/<p style="color:#aaa.*?<\/p>/, '<p style="color:#e07b00;font-size:12px;margin-top:20px;margin-bottom:0;">⚠ 本次照片因容量過大無法附入郵件，請另行確認。</p>');
+      templateParams.html_body = htmlBodyLite;
+      console.warn('照片資料量過大，已改為純文字模式寄送');
+    }
+    // ─────────────────────────────────────────────────────────────
+
     // Initialize EmailJS
     emailjs.init(EMAILJS_PUBLIC_KEY);
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
 
     closeSubmitModal();
     showToast('✅ 報告已成功寄出！');
-    // Optionally reset after submit
-    // resetAll();
 
   } catch (err) {
-    console.error(err);
-    showToast('⚠ 寄送失敗，請檢查 EmailJS 設定', true);
+    console.error('EmailJS error:', err);
+    const msg = err?.text || err?.message || JSON.stringify(err);
+    if (msg.includes('413') || msg.includes('payload') || msg.includes('size')) {
+      showToast('⚠ 照片太多導致失敗，請減少照片後重試', true);
+    } else {
+      showToast('⚠ 寄送失敗：' + msg.slice(0, 40), true);
+    }
   } finally {
     btn.disabled = false;
     label.textContent = '確認寄送';
