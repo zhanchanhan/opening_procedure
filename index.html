@@ -2,9 +2,10 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="行動優先的開店 SOP 清單：進度追蹤、照片紀錄與本機報告下載。" />
+<meta name="theme-color" content="#0f0f10" />
 <title>開店流程清單</title>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root {
     --bg: #0f0f10;
@@ -84,6 +85,12 @@
     white-space: nowrap;
     min-width: 60px;
     text-align: right;
+  }
+  .privacy-note {
+    margin-top: 10px;
+    color: var(--text3);
+    font-size: .68rem;
+    line-height: 1.4;
   }
 
   /* ── Sections ── */
@@ -408,6 +415,25 @@
     gap: 6px;
   }
   .btn-confirm:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+  .download-ready {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--green-dim);
+    border-radius: var(--radius-sm);
+    background: #12201a;
+    color: var(--green);
+    font-size: .82rem;
+    line-height: 1.5;
+  }
+  .download-ready[hidden] { display: none; }
+  .download-link {
+    display: inline-block;
+    margin-top: 7px;
+    color: var(--text);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 
   /* Toast */
   .toast {
@@ -467,8 +493,9 @@
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progressFill"></div>
     </div>
-    <span class="progress-label" id="progressLabel">0 / 18</span>
+    <span class="progress-label" id="progressLabel">0 / 16</span>
   </div>
+  <p class="privacy-note">Portfolio Demo · 所有資料只在此裝置處理，不會上傳或寄送</p>
 </div>
 
 <!-- All done banner -->
@@ -476,7 +503,7 @@
   <div class="all-done-icon">🎉</div>
   <div>
     <div class="all-done-text">全部項目完成！</div>
-    <div class="all-done-sub">點選下方「提交報告」寄送紀錄</div>
+    <div class="all-done-sub">點選下方「下載報告」保存本機紀錄</div>
   </div>
 </div>
 
@@ -488,25 +515,29 @@
   <div class="submit-row">
     <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
     <button class="btn-submit" id="submitBtn" onclick="openSubmitModal()">
-      <span>📤 提交報告</span>
+      <span>⬇️ 下載報告</span>
     </button>
   </div>
 </div>
 
 <!-- Submit Modal -->
 <div class="modal-overlay" id="submitModal">
-  <div class="modal">
-    <h2>📤 提交開店紀錄</h2>
-    <p>將完成清單及照片以郵件寄送至指定帳號。<br>請填寫今日當班人員。</p>
-    <label class="modal-input-label">當班人員姓名</label>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+    <h2 id="reportModalTitle">⬇️ 產生開店紀錄</h2>
+    <p>展示版會在瀏覽器內產生 HTML 報告並下載至本機，不會上傳任何姓名、備註或照片。</p>
+    <label class="modal-input-label" for="staffName">當班人員姓名</label>
     <input class="modal-input" id="staffName" type="text" placeholder="請輸入姓名" />
-    <label class="modal-input-label">備註（選填）</label>
+    <label class="modal-input-label" for="staffNote">備註（選填）</label>
     <textarea class="modal-input" id="staffNote" rows="3" placeholder="任何需要告知主管的事項…" style="resize:none;"></textarea>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
       <button class="btn-confirm" id="confirmSendBtn" onclick="submitReport()">
-        <span id="sendBtnLabel">確認寄送</span>
+        <span id="sendBtnLabel">產生報告</span>
       </button>
+    </div>
+    <div class="download-ready" id="downloadReady" hidden>
+      報告已在此裝置產生。
+      <br><a class="download-link" id="downloadLink" href="#" download>點此下載 HTML 報告</a>
     </div>
   </div>
 </div>
@@ -515,13 +546,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── EmailJS Config ──────────────────────────────────────────────
-// 請在 https://www.emailjs.com/ 申請帳號後填入以下三個值：
-const EMAILJS_SERVICE_ID  = 'service_g528rop';
-const EMAILJS_TEMPLATE_ID = 'template_pcqsjxg';
-const EMAILJS_PUBLIC_KEY  = 'R8f6lR712-i5veWma';
-const TARGET_EMAIL        = 'pudding8216@gmail.com';
-
 // ── Checklist Data ─────────────────────────────────────────────
 const sections = [
   {
@@ -549,7 +573,7 @@ const sections = [
     items: [
       { id: 8, name: '器具用生飲水淋過後歸位', desc: '' },
       { id: 9, name: '冰槽桶用生飲水淋過後打冰', desc: '' },
-      { id: 10, name: 'POS 機開機，清點零用金', desc: '應為 $10,000 整（含零錢盤）。不足請立即告知主管並傳群組，未告知而少錢由當班人員負責', important: true },
+      { id: 10, name: 'POS 機開機，清點零用金', desc: '依交班表核對備用金；若有差異，立即記錄並回報主管', important: true },
       { id: 11, name: '確認發票機＆貼紙機已開機', desc: '未開機將無法出單' },
     ]
   },
@@ -578,6 +602,7 @@ const TOTAL = allItems.length;
 
 // ── State ──────────────────────────────────────────────────────
 let state = {}; // { [id]: { done: bool, photos: [{name, dataUrl}] } }
+let reportObjectUrl = '';
 
 function initState() {
   // 每次開啟頁面都自動重置，不保留上次狀態
@@ -612,6 +637,16 @@ function render() {
       const main = document.createElement('div');
       main.className = 'item-main';
       main.onclick = () => toggleItem(item.id);
+      main.tabIndex = 0;
+      main.setAttribute('role', 'checkbox');
+      main.setAttribute('aria-checked', String(s.done));
+      main.setAttribute('aria-label', item.name);
+      main.onkeydown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleItem(item.id);
+        }
+      };
 
       const cb = document.createElement('div');
       cb.className = 'checkbox' + (s.done ? ' checked' : '');
@@ -798,7 +833,7 @@ function resetAll() {
 }
 
 // ── Date ───────────────────────────────────────────────────────
-let plainDateStr = ''; // 純文字日期，供郵件 subject 使用（避免 HTML encode）
+let plainDateStr = ''; // 純文字日期，供下載檔名使用
 
 function setDate() {
   const d = new Date();
@@ -807,21 +842,29 @@ function setDate() {
   const mo = String(d.getMonth()+1).padStart(2,'0');
   const da = String(d.getDate()).padStart(2,'0');
   const dw = days[d.getDay()];
-  // DOM 顯示用（/ 在 textContent 完全安全，但讀回來 emailjs 可能再 encode）
   document.getElementById('headerDate').textContent = `${y}/${mo}/${da} 週${dw}`;
-  // 郵件用：改用中文間隔，完全避開特殊字元
   plainDateStr = `${y}年${mo}月${da}日 週${dw}`;
 }
 
 // ── Modal ──────────────────────────────────────────────────────
 function openSubmitModal() {
   document.getElementById('submitModal').classList.add('open');
+  setTimeout(() => document.getElementById('staffName').focus(), 0);
 }
 function closeSubmitModal() {
   document.getElementById('submitModal').classList.remove('open');
 }
 
-// ── Submit ─────────────────────────────────────────────────────
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+// ── Local report download ──────────────────────────────────────
 async function submitReport() {
   const staff = document.getElementById('staffName').value.trim();
   const note  = document.getElementById('staffNote').value.trim();
@@ -840,7 +883,7 @@ async function submitReport() {
   try {
     const dateStr = document.getElementById('headerDate').textContent;
 
-    // ── 1. 送出前強制壓縮所有照片到每張 ≤ 20KB base64 ──
+    // ── 1. 下載前壓縮所有照片到每張 ≤ 20KB base64 ──
     const PER_PHOTO_BUDGET = 20000;
     const compressedPhotos = {};
     const tasks = [];
@@ -854,20 +897,17 @@ async function submitReport() {
     });
     await Promise.all(tasks);
 
-    label.innerHTML = '<div class="spinner"></div> 寄送中…';
+    label.innerHTML = '<div class="spinner"></div> 產生報告中…';
 
     // ── 2. 分類完成 / 未完成 ──
     const doneItems   = [];
-    const undoneItems = [];
     sections.forEach(sec => {
       sec.items.forEach(item => {
         const s = state[item.id] || { done: false, photos: [] };
         const entry = { id: item.id, name: item.name, section: sec.title, photos: s.photos || [] };
-        if (s.done) doneItems.push(entry); else undoneItems.push(entry);
+        if (s.done) doneItems.push(entry);
       });
     });
-
-    const summary = `開店報告 ${dateStr} 當班:${staff} 完成:${doneItems.length}/${TOTAL}${note ? ' 備註:' + note : ''}`;
 
     // ── 3. 組裝 HTML（使用壓縮後照片）──
     let rows = '';
@@ -879,17 +919,17 @@ async function submitReport() {
           ? cPhotos.map(d => `<img src="${d}" width="90" style="border-radius:4px;margin:2px;border:1px solid #ddd;"/>`).join('')
           : '—';
         rows += `<tr>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;white-space:nowrap;">${sec.title}</td>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;">${item.name}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;white-space:nowrap;">${escapeHtml(sec.title)}</td>
+<td style="padding:7px 9px;border-bottom:1px solid #eee;">${escapeHtml(item.name)}</td>
 <td style="padding:7px 9px;border-bottom:1px solid #eee;text-align:center;">${s.done ? '✅' : '❌'}</td>
 <td style="padding:7px 9px;border-bottom:1px solid #eee;">${photoCell}</td>
 </tr>`;
       });
     });
 
-    const htmlBody = `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
+    const htmlBody = `<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>開店流程報告</title></head><body><div style="font-family:Arial,sans-serif;max-width:640px;margin:32px auto;padding:0 16px;">
 <h2 style="color:#f0a500;">☕ 開店流程報告</h2>
-<p><b>日期：</b>${dateStr}<br><b>當班：</b>${staff}<br><b>完成：</b>${doneItems.length}/${TOTAL} 項${note ? `<br><b>備註：</b>${note}` : ''}</p>
+<p><b>日期：</b>${escapeHtml(dateStr)}<br><b>當班：</b>${escapeHtml(staff)}<br><b>完成：</b>${doneItems.length}/${TOTAL} 項${note ? `<br><b>備註：</b>${escapeHtml(note)}` : ''}</p>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <thead><tr style="background:#f0f0f0;">
 <th style="padding:7px 9px;text-align:left;">區域</th>
@@ -899,51 +939,27 @@ async function submitReport() {
 </tr></thead>
 <tbody>${rows}</tbody>
 </table>
-<p style="color:#aaa;font-size:11px;margin-top:14px;">此郵件由開店清單系統自動發送</p>
-</div>`;
+<p style="color:#888;font-size:11px;margin-top:14px;">此報告由 Portfolio Demo 在本機產生；資料未上傳至任何伺服器。</p>
+</div></body></html>`;
 
-    // ── 4. Payload 安全檢查：超過 48KB 則移除照片保底送出 ──
-    const params = {
-      to_email: TARGET_EMAIL,
-      subject:  `開店報告｜${plainDateStr}｜${staff}`,
-      name:     staff,
-      date:     dateStr,
-      message:  summary,
-      html_body: htmlBody,
-      note:     note || '無',
-    };
-
-    let photosDropped = false;
-    if (JSON.stringify(params).length > 48000) {
-      photosDropped = true;
-      let rowsFb = '';
-      sections.forEach(sec => {
-        sec.items.forEach(item => {
-          const s   = state[item.id] || { done: false, photos: [] };
-          const cnt = (s.photos || []).length;
-          rowsFb += `<tr>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;">${sec.title}</td>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;">${item.name}</td>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;text-align:center;">${s.done ? '✅' : '❌'}</td>
-<td style="padding:7px 9px;border-bottom:1px solid #eee;">${cnt ? `📷 ${cnt}張` : '—'}</td>
-</tr>`;
-        });
-      });
-      params.html_body = htmlBody.replace(/<tbody>[\s\S]*<\/tbody>/m, `<tbody>${rowsFb}</tbody>`);
-    }
-
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
-
-    closeSubmitModal();
-    showToast(photosDropped ? '✅ 已寄出（照片過多已略去）' : '✅ 報告已成功寄出！');
+    // ── 4. 只在本機建立並下載 HTML 檔案 ──
+    const blob = new Blob([htmlBody], { type: 'text/html;charset=utf-8' });
+    if (reportObjectUrl) URL.revokeObjectURL(reportObjectUrl);
+    reportObjectUrl = URL.createObjectURL(blob);
+    const link = document.getElementById('downloadLink');
+    const safeStaff = staff.replace(/[\\/:*?"<>|]/g, '-').slice(0, 30);
+    link.href = reportObjectUrl;
+    link.download = `開店報告-${plainDateStr}-${safeStaff}.html`;
+    document.getElementById('downloadReady').hidden = false;
+    link.focus();
+    showToast('✅ 報告已產生；請點連結下載');
 
   } catch (err) {
-    console.error('EmailJS error:', err);
-    showToast('⚠ 寄送失敗：' + String(err?.text || err?.message || err).slice(0, 60), true);
+    console.error('Report generation error:', err);
+    showToast('⚠ 報告產生失敗：' + String(err?.message || err).slice(0, 60), true);
   } finally {
     btn.disabled = false;
-    label.textContent = '確認寄送';
+    label.textContent = '產生報告';
   }
 }
 // ── Toast ──────────────────────────────────────────────────────
@@ -959,6 +975,13 @@ function showToast(msg, isError = false) {
 initState();
 setDate();
 render();
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeSubmitModal();
+});
+window.addEventListener('beforeunload', () => {
+  if (reportObjectUrl) URL.revokeObjectURL(reportObjectUrl);
+});
 </script>
 </body>
 </html>
