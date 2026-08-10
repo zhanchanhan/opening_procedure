@@ -116,7 +116,7 @@ docs/ai-development-log.md   AI collaboration and validation examples
 .github/workflows/pages.yml  GitHub Pages deployment
 ```
 
-## Interview summary
+## Summary
 
 > I used a real operational workflow to build a zero-install mobile prototype. The interesting engineering constraint was photo handling: images needed to remain useful while staying small enough for a portable report. The public version also demonstrates product judgment—an email integration was removed and replaced with local-only generation because a portfolio demo should not expose operational recipients or credentials.
 
