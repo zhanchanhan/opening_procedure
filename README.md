@@ -6,7 +6,7 @@ A mobile-first opening SOP checklist with progress tracking, photo evidence, in-
 
 [Live demo](https://zhanchanhan.github.io/opening_procedure/) · [AI development notes](docs/ai-development-log.md)
 
-> Portfolio Demo：姓名、備註與照片都只在瀏覽器處理。公開版本不包含寄信服務、API key 或真實門市收件資訊。
+> Portfolio Demo：公開版本不包含寄信服務、API key 或真實門市收件資訊。
 
 ![Opening Procedure Checklist mobile demo](docs/images/mobile-demo.png)
 
